@@ -1,0 +1,74 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+
+@Injectable()
+export class OrdersService {
+  constructor(
+    @Inject('RABBITMQ_SERVICE')
+    private readonly rabbitClient: ClientProxy,
+  ) {}
+
+  createOrder() {
+    const order = {
+      orderId: 123,
+      userId: 50,
+      total: 1000,
+    };
+
+    this.rabbitClient.emit('order.created', order);
+
+    return order;
+  }
+}
+import { Module } from '@nestjs/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+
+@Module({
+  imports: [
+    ClientsModule.register([
+      {
+        name: 'RABBITMQ_SERVICE',
+
+        transport: Transport.RMQ,
+
+        options: {
+          urls: ['amqp://localhost:5672'],
+
+          queue: 'orders_queue',
+
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+    ]),
+  ],
+})
+export class OrdersModule {}
+
+
+
+
+Consumer
+
+دلوقتي Notification Service يستقبل الرسالة:
+
+import {
+  Controller,
+} from '@nestjs/common';
+
+import {
+  EventPattern,
+  Payload,
+} from '@nestjs/microservices';
+
+@Controller()
+export class NotificationsController {
+
+  @EventPattern('order.created')
+  handleOrderCreated(
+    @Payload() data: any,
+  ) {
+    console.log('New Order:', data);
+  }
+}

@@ -1,0 +1,28 @@
+                Producer
+            Order Service
+                  │
+                  │
+                  │ emit()
+                  ↓
+          ┌───────────────┐
+          │   RabbitMQ    │
+          │               │
+          │   Exchange    │
+          │       │       │
+          └───────┼───────┘
+                  │
+          routing key
+        "order.created"
+                  │
+                  ↓
+          ┌───────────────┐
+          │     Queue     │
+          │               │
+          │   Order 123   │
+          │   Order 124   │
+          │   Order 125   │
+          └───────┬───────┘
+                  │
+                  ↓
+              Consumer
+        Notification Service

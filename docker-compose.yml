@@ -1,0 +1,96 @@
+services:
+  gateway:
+    build:
+      context: ./
+      dockerfile: ./apps/gateway/Dockerfile
+      target: development
+    command: npm run start:dev:gateway
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./apps/gateway/.env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      auth:
+        condition: service_healthy
+      reservations:
+        condition: service_healthy
+    restart: on-failure
+
+  reservations:
+    build:
+      context: ./
+      dockerfile: ./apps/reservations/Dockerfile
+      target: development
+    command: npm run start:dev:reservations
+    env_file:
+      - ./apps/reservations/.env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - mongo
+      - rabbitmq
+      - auth
+      - payments
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --header='Content-Type: application/json' --post-data='{\"query\":\"{__typename}\"}' http://localhost:3003/graphql || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  auth:
+    build:
+      context: ./
+      dockerfile: ./apps/auth/Dockerfile
+      target: development
+    command: npm run start:dev:auth
+    env_file:
+      - ./apps/auth/.env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - mongo
+      - rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --header='Content-Type: application/json' --post-data='{\"query\":\"{__typename}\"}' http://localhost:3001/graphql || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  payments:
+    build:
+      context: ./
+      dockerfile: ./apps/payments/Dockerfile
+      target: development
+    command: npm run start:dev:payments
+    env_file:
+      - ./apps/payments/.env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - rabbitmq
+
+  notifications:
+    build:
+      context: ./
+      dockerfile: ./apps/notifications/Dockerfile
+      target: development
+    command: npm run start:dev:notifications
+    env_file:
+      - ./apps/notifications/.env
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - rabbitmq
+
+  mongo:
+    image: mongo
+    ports:
+      - '27017:27017'
+  rabbitmq:
+    image: rabbitmq
+    ports:
+      - '5672:5672'
